@@ -1,4 +1,6 @@
 '''
+Tindeq Session Conslidator - Merge Repeater Sessions and output as CSV/JSON
+
 Assumes info.csv structure: date,tag,comment,unit,reps,work dur.,pause btw. reps,sets,pause btw. sets,type
 
 Uses the saved name of your session as the exercise name. Details of the set (reps, work, and rest) are saved with each record. 
@@ -27,7 +29,7 @@ def init_argparse() -> argparse.ArgumentParser:
         usage="%(prog)s [OPTIONS]",
         description='-'*80 + '\nTindeq Session Consolidator\n' + '-'*80 + '\n'
     )
-    parser.add_argument("filename", type=str, help="Zip file to convert")
+    parser.add_argument("filename", nargs='?', type=str, default='tindeq.zip', help="Zip file to convert")
     parser.add_argument("-c", "--csv", action='store_true', help="Ouput CSV (default)")
     parser.add_argument("-j", "--json", action='store_true', help="Output JSON")
     parser.add_argument("-v", "--version", action="version", version=f"{parser.prog} version 1.0.0")
@@ -125,30 +127,27 @@ def consolidator(zipfilename):
 def main():
     parser = init_argparse()
     args = parser.parse_args()
-    
+
     if check_path(args.filename) == 0:
         output_dir = os.getcwd() + '/'
     else:
         output_dir = ''
     
-    if args.filename:
-        print(f"[+] INFO: Consolidating '{output_dir + args.filename}'")
-    else:
-        print(f"[+] INFO: File not specified, looking for 'tindeq.zip'")
-        args.filename = 'tindeq.zip'
-
-    zipfilename = args.filename
-
-    tindeq_df = consolidator(zipfilename)
+    if os.path.isfile(output_dir + args.filename) == 0:
+        print(f"[-] ERROR: Could not find zip file to process '{output_dir + args.filename}'")
+        exit()
+    
+    print(f"[+] INFO: Consolidating '{output_dir + args.filename}'")
+    tindeq_df = consolidator(output_dir + args.filename)
 
     # Write the output
     if args.csv or (args.csv == False and args.json == False):
-        print(f"[+] INFO: Writing CSV '{output_dir + zipfilename.split('.')[0] + '.csv'}'")
-        tindeq_df.to_csv(output_dir + zipfilename.split('.')[0] + '.csv')
+        print(f"[+] INFO: Writing CSV '{output_dir + args.filename.split('.')[0] + '.csv'}'")
+        tindeq_df.to_csv(output_dir + args.filename.split('.')[0] + '.csv')
     
     if args.json:
-        print(f"[+] INFO: Writing JSON '{output_dir + zipfilename.split('.')[0] + '.json'}'")
-        pretty_json = tindeq_df.T.to_json(output_dir + zipfilename.split('.')[0] + '.json', indent=4)
+        print(f"[+] INFO: Writing JSON '{output_dir + args.filename.split('.')[0] + '.json'}'")
+        tindeq_df.T.to_json(output_dir + args.filename.split('.')[0] + '.json', indent=4)
 
 if __name__ == "__main__":
     main()
